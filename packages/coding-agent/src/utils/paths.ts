@@ -16,6 +16,25 @@ export function canonicalizePath(path: string): string {
 	}
 }
 
+export function normalizeWindowsDrivePath(path: string): string {
+	if (process.platform !== "win32") {
+		return path;
+	}
+
+	const driveRootPath = path.match(/^[/\\]([a-zA-Z]:[/\\].*)$/);
+	if (driveRootPath?.[1]) {
+		return driveRootPath[1];
+	}
+
+	const msysPath = path.match(/^\/([a-zA-Z])(?:\/(.*)|$)$/);
+	if (msysPath?.[1]) {
+		const rest = msysPath[2] ? msysPath[2].replaceAll("/", "\\") : "";
+		return `${msysPath[1].toUpperCase()}:\\${rest}`;
+	}
+
+	return path;
+}
+
 /**
  * Returns true if the value is NOT a package source (npm:, git:, etc.)
  * or a URL protocol. Bare names and relative paths without ./ prefix

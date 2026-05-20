@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { canonicalizePath, getCwdRelativePath, isLocalPath } from "../src/utils/paths.ts";
+import { canonicalizePath, getCwdRelativePath, isLocalPath, normalizeWindowsDrivePath } from "../src/utils/paths.ts";
 
 let tempDir: string;
 
@@ -70,6 +70,21 @@ describe("getCwdRelativePath", () => {
 	it("rejects parent-directory traversals", () => {
 		const cwd = join(tmpdir(), "pi-paths-cwd");
 		expect(getCwdRelativePath(join(cwd, "..", "AGENTS.md"), cwd)).toBeUndefined();
+	});
+});
+
+describe("normalizeWindowsDrivePath", () => {
+	it.skipIf(process.platform !== "win32")(
+		"normalizes MSYS drive paths without rewriting unrelated POSIX-style paths",
+		() => {
+			expect(normalizeWindowsDrivePath("/c/Users/class")).toBe("C:\\Users\\class");
+			expect(normalizeWindowsDrivePath("/tmp/pi")).toBe("/tmp/pi");
+		},
+	);
+
+	it.skipIf(process.platform === "win32")("does not rewrite paths on non-Windows platforms", () => {
+		expect(normalizeWindowsDrivePath("/c/Users/class")).toBe("/c/Users/class");
+		expect(normalizeWindowsDrivePath("/tmp/pi")).toBe("/tmp/pi");
 	});
 });
 

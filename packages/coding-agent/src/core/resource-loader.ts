@@ -8,7 +8,7 @@ import type { ResourceDiagnostic } from "./diagnostics.ts";
 
 export type { ResourceCollision, ResourceDiagnostic } from "./diagnostics.ts";
 
-import { canonicalizePath, isLocalPath } from "../utils/paths.ts";
+import { canonicalizePath, isLocalPath, normalizeWindowsDrivePath } from "../utils/paths.ts";
 import { createEventBus, type EventBus } from "./event-bus.ts";
 import { createExtensionRuntime, loadExtensionFromFactory, loadExtensions } from "./extensions/loader.ts";
 import type { Extension, ExtensionFactory, ExtensionRuntime, LoadExtensionsResult } from "./extensions/types.ts";
@@ -674,7 +674,7 @@ export class DefaultResourceLoader implements ResourceLoader {
 	}
 
 	private resolveResourcePath(p: string): string {
-		const trimmed = p.trim();
+		const trimmed = normalizeWindowsDrivePath(p.trim());
 		let expanded = trimmed;
 		if (trimmed === "~") {
 			expanded = homedir();

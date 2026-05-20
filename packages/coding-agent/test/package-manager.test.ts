@@ -163,6 +163,7 @@ Content`,
 			process.env.HOME = tempDir;
 
 			try {
+				mkdirSync(join(tempDir, ".git"), { recursive: true });
 				const sharedDir = join(tempDir, "shared-resources");
 				const sharedExtensionsDir = join(sharedDir, "extensions");
 				const sharedSkillsDir = join(sharedDir, "skills");
@@ -629,6 +630,42 @@ Content`,
 			]);
 
 			expect(output).toBe(valueWithSpace);
+		});
+	});
+
+	describe.skipIf(process.platform !== "win32")("Windows path normalization", () => {
+		it("should normalize MSYS HOME before scanning user .agents skills", async () => {
+			const previousHome = process.env.HOME;
+			const windowsHome = tempDir;
+			const msysHome = `/${windowsHome[0]?.toLowerCase()}${windowsHome.slice(2).replaceAll("\\", "/")}`;
+			process.env.HOME = msysHome;
+
+			try {
+				const driveRoot = `${windowsHome[0]}:\\`;
+				const otherDrive = windowsHome[0]?.toUpperCase() === "C" ? "D" : "C";
+				const otherDriveCwd = `${otherDrive}:\\pi-path-test`;
+				const agentsBaseDir = join(windowsHome, ".agents");
+				const skillPath = join(agentsBaseDir, "skills", "home-skill", "SKILL.md");
+				mkdirSync(join(agentsBaseDir, "skills", "home-skill"), { recursive: true });
+				writeFileSync(skillPath, "---\nname: home-skill\ndescription: home\n---\n");
+
+				const pm = new DefaultPackageManager({
+					cwd: otherDriveCwd,
+					agentDir,
+					settingsManager,
+				});
+
+				const result = await pm.resolve();
+
+				expect(result.skills.some((r) => r.path === skillPath && r.enabled)).toBe(true);
+				expect(result.skills.some((r) => r.path.startsWith(`${otherDrive}:\\${driveRoot}`))).toBe(false);
+			} finally {
+				if (previousHome === undefined) {
+					delete process.env.HOME;
+				} else {
+					process.env.HOME = previousHome;
+				}
+			}
 		});
 	});
 
